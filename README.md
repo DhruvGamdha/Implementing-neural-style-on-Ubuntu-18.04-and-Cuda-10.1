@@ -519,17 +519,3 @@ We perform style reconstructions using the `conv1_1`, `conv2_1`, `conv3_1`, `con
 and content reconstructions using the `conv4_2` layer. As in the paper, the five style reconstruction losses have
 equal weights.
 
-## Citation
-
-If you find this code useful for your research, please cite:
-
-```
-@misc{Johnson2015,
-  author = {Johnson, Justin},
-  title = {neural-style},
-  year = {2015},
-  publisher = {GitHub},
-  journal = {GitHub repository},
-  howpublished = {\url{https://github.com/jcjohnson/neural-style}},
-}
-```
