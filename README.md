@@ -1,4 +1,10 @@
-# neural-style
+# Implementing [neural style code by Justin Johnson](https://github.com/jcjohnson/neural-style) on Ubuntu 18.04 and CUDA 10.1
+While implementing this code on Ubuntu 18.04 and CUDA 10.1, I faced several obstacles mainly with the installation of 
+prerequisite libraries such as torch7, loadcaffe, cutorch and cunn as these libraries are not directly compatible with
+the above mentioned Ubuntu and CUDA versions. 
+
+I hope this repository would help others who are trying to install these libraries on their system and will help them
+smoothly run this code.  
 
 This is a torch implementation of the paper [A Neural Algorithm of Artistic Style](http://arxiv.org/abs/1508.06576)
 by Leon A. Gatys, Alexander S. Ecker, and Matthias Bethge.
@@ -127,21 +133,85 @@ this is similar to [the recent blog post by deepart.io](http://blog.deepart.io/2
 
 ## Setup:
 
-Dependencies:
-* [torch7](https://github.com/torch/torch7)
-* [loadcaffe](https://github.com/szagoruyko/loadcaffe)
+This guide will walk you through the setup for `neural-style` on Ubuntu 18.04 and CUDA 10.1.
 
-Optional dependencies:
-* For CUDA backend:
-  * CUDA 6.5+
-  * [cunn](https://github.com/torch/cunn)
-* For cuDNN backend:
-  * [cudnn.torch](https://github.com/soumith/cudnn.torch)
-* For OpenCL backend:
-  * [cltorch](https://github.com/hughperkins/cltorch)
-  * [clnn](https://github.com/hughperkins/clnn)
+### Step-1: Install CUDA
 
-After installing dependencies, you'll need to run the following script to download the VGG model:
+First download [CUDA 10.1](https://developer.nvidia.com/cuda-downloads) corresponding system and unpack it. 
+Now update the repository cache and install CUDA. Note that this will also install a graphics driver from NVIDIA.
+```
+sudo apt-get update
+sudo apt-get install cuda
+```
+At this point you may need to reboot your machine to load the new graphics driver. After rebooting, you should be able to see the status of your graphics card(s) by running the command nvidia-smi; it should give output that looks something like this:
+```
+Mon Sep  9 22:27:28 2019       
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 418.87.00    Driver Version: 418.87.00    CUDA Version: 10.1     |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|===============================+======================+======================|
+|   0  GeForce RTX 208...  On   | 00000000:01:00.0  On |                  N/A |
+| 35%   38C    P0    53W / 260W |   3919MiB / 10986MiB |     35%      Default |
++-------------------------------+----------------------+----------------------+
+|   1  GeForce RTX 208...  On   | 00000000:03:00.0 Off |                  N/A |
+| 35%   30C    P8    20W / 260W |      1MiB / 10989MiB |      0%      Default |
++-------------------------------+----------------------+----------------------+
+                                                                               
++-----------------------------------------------------------------------------+
+| Processes:                                                       GPU Memory |
+|  GPU       PID   Type   Process name                             Usage      |
+|=============================================================================|
+|    0      1763      G   /usr/lib/xorg/Xorg                            40MiB |
+|    0      1817      G   /usr/bin/gnome-shell                          58MiB |
+|    0      4995      G   /usr/lib/xorg/Xorg                          1233MiB |
+|    0      5143      G   /usr/bin/gnome-shell                         738MiB |
+|    0     10018      G   ...quest-channel-token=7976773505696378946  1489MiB |
+|    0     11403      G   ...uest-channel-token=17206146747911347054   356MiB |
++-----------------------------------------------------------------------------+
+
+```
+
+### Step-2 : Install torch7
+
+First we need to install torch.
+Building Torch with CUDA10 is a troublesome work. Official [torch distro](https://github.com/torch/distro.git) will not work. We will be using [nagadomi's](https://github.com/nagadomi) modified [torch's distro](https://github.com/nagadomi/distro.git) for CUDA10. Please note that this only works with CUDA10.
+```
+# in a terminal, run the commands
+cd ~/
+git clone https://github.com/nagadomi/distro.git ~/torch --recursive
+cd ~/torch
+bash install-deps 	# installs all the dependences for torch. 
+./install.sh 						# install lua and torch 
+./update.sh								
+```
+`./install.sh` and also edits .bashrc to add torch to your PATH variable. Hence we source .bashrc to refresh your 
+environment variable.
+```
+source ~/.bashrc
+```
+To check that your torch installation is working, run the command `th` to enter the interactive shell. To quit just type `exit`.
+
+### Step-3 : Install loadcaffe
+
+`loadcaffe` depends on [Google's Protocol Buffer library](https://developers.google.com/protocol-buffers/?hl=en) so we'll need to install that first:
+```
+sudo apt-get install libprotobuf-dev protobuf-compiler
+```
+Now we can instal `loadcaffe`:
+```
+luarocks install loadcaffe
+```
+### Step-4: Install neural-style
+
+First we clone `neural-style` from GitHub:
+```
+cd ~/
+git clone https://github.com/DhruvGamdha/Implementing-neural-style-on-Ubuntu-18.04-and-Cuda-10.1.git ~/neural-style --recursive
+cd neural-style
+```
+Next we need to download the pretrained neural network models:
 ```
 sh models/download_models.sh
 ```
@@ -151,7 +221,130 @@ this will also be downloaded. By default the original VGG-19 model is used.
 
 If you have a smaller memory GPU then using NIN Imagenet model will be better and gives slightly worse yet comparable results. You can get the details on the model from [BVLC Caffe ModelZoo](https://github.com/BVLC/caffe/wiki/Model-Zoo) and can download the files from [NIN-Imagenet Download Link](https://drive.google.com/folderview?id=0B0IedYUunOQINEFtUi1QNWVhVVU&usp=drive_web)
 
-You can find detailed installation instructions for Ubuntu in the [installation guide](INSTALL.md).
+You should now be able to run `neural-style` in CPU mode like this:
+```
+th neural_style.lua -gpu -1 -print_iter 1
+```
+If everything is working properly you should see output like this:
+```
+[libprotobuf WARNING google/protobuf/io/coded_stream.cc:505] Reading dangerously large protocol message.  If the message turns out to be larger than 1073741824 bytes, parsing will be halted for security reasons.  To increase the limit (or to disable these warnings), see CodedInputStream::SetTotalBytesLimit() in google/protobuf/io/coded_stream.h.
+[libprotobuf WARNING google/protobuf/io/coded_stream.cc:78] The total number of bytes read was 574671192
+Successfully loaded models/VGG_ILSVRC_19_layers.caffemodel
+conv1_1: 64 3 3 3
+conv1_2: 64 64 3 3
+conv2_1: 128 64 3 3
+conv2_2: 128 128 3 3
+conv3_1: 256 128 3 3
+conv3_2: 256 256 3 3
+conv3_3: 256 256 3 3
+conv3_4: 256 256 3 3
+conv4_1: 512 256 3 3
+conv4_2: 512 512 3 3
+conv4_3: 512 512 3 3
+conv4_4: 512 512 3 3
+conv5_1: 512 512 3 3
+conv5_2: 512 512 3 3
+conv5_3: 512 512 3 3
+conv5_4: 512 512 3 3
+fc6: 1 1 25088 4096
+fc7: 1 1 4096 4096
+fc8: 1 1 4096 1000
+WARNING: Skipping content loss	
+Iteration 1 / 1000	
+  Content 1 loss: 2091178.593750	
+  Style 1 loss: 30021.292114	
+  Style 2 loss: 700349.560547	
+  Style 3 loss: 153033.203125	
+  Style 4 loss: 12404635.156250	
+  Style 5 loss: 656.860304	
+  Total loss: 15379874.666090	
+Iteration 2 / 1000	
+  Content 1 loss: 2091177.343750	
+  Style 1 loss: 30021.292114	
+  Style 2 loss: 700349.560547	
+  Style 3 loss: 153033.203125	
+  Style 4 loss: 12404633.593750	
+  Style 5 loss: 656.860304	
+  Total loss: 15379871.853590	
+```
+### Step-5: Install CUDA backend for torch
+`luarocks install cutorch` and `luarocks install cunn` will not work because it downloads cutorch and cunn from original cutorch and cunn versions from internet which will not work in our case due to incompatibility issues. To install compatible cutorch and cunn from local disk, use the following commands.
+```
+cd ~/torch/extra/cutorch
+luarocks make rocks/cutorch-scm-1.rockspec
+cd ~/torch/extra/cunn
+luarocks make rocks/cunn-scm-1.rockspec
+```
+You can check that the installation worked by running the following:
+```
+th -e "require 'cutorch'; require 'cunn'; print(cutorch)"
+```
+This should produce output like the this:
+```
+{
+  getStream : function: 0x40d40ce8
+  getDeviceCount : function: 0x40d413d8
+  setHeapTracking : function: 0x40d41a78
+  setRNGState : function: 0x40d41a00
+  getBlasHandle : function: 0x40d40ae0
+  reserveBlasHandles : function: 0x40d40980
+  setDefaultStream : function: 0x40d40f08
+  getMemoryUsage : function: 0x40d41480
+  getNumStreams : function: 0x40d40c48
+  manualSeed : function: 0x40d41960
+  synchronize : function: 0x40d40ee0
+  reserveStreams : function: 0x40d40bf8
+  getDevice : function: 0x40d415b8
+  seed : function: 0x40d414d0
+  deviceReset : function: 0x40d41608
+  streamWaitFor : function: 0x40d40a00
+  withDevice : function: 0x40d41630
+  initialSeed : function: 0x40d41938
+  CudaHostAllocator : torch.Allocator
+  test : function: 0x40ce5368
+  getState : function: 0x40d41a50
+  streamBarrier : function: 0x40d40b58
+  setStream : function: 0x40d40c98
+  streamBarrierMultiDevice : function: 0x40d41538
+  streamWaitForMultiDevice : function: 0x40d40b08
+  createCudaHostTensor : function: 0x40d41670
+  setBlasHandle : function: 0x40d40a90
+  streamSynchronize : function: 0x40d41590
+  seedAll : function: 0x40d414f8
+  setDevice : function: 0x40d414a8
+  getNumBlasHandles : function: 0x40d409d8
+  getDeviceProperties : function: 0x40d41430
+  getRNGState : function: 0x40d419d8
+  manualSeedAll : function: 0x40d419b0
+  _state : userdata: 0x022fe750
+}
+```
+You should now be able to run `neural-style` in GPU mode:
+```
+th neural_style.lua -gpu 0 -print_iter 1
+```
+### Step 6: Install cuDNN
+
+cuDNN is a library from NVIDIA that efficiently implements many of the operations (like convolutions and pooling) that are commonly used in deep learning.
+After registering as a developer with NVIDIA, you can [download cuDNN here](https://developer.nvidia.com/cudnn). Download Version 7.6 for CUDA 10.1 and Ubuntu 18.04.
+After dowloading and unpacking, copy and paste cuDNN files like this:
+```
+# open directory containing the unpacked directory and run the following commands.
+sudo cp cuda/lib64/libcudnn* /usr/local/cuda-10.1/lib64/
+sudo cp cuda/include/cudnn.h /usr/local/cuda-10.1/include/
+```
+Next we need to install the torch bindings for cuDNN, `luarocks install cudnn` will not work. The master branch of cuDNN.torch does not support cuDNN v7. Installing from R7 branch probably works fine.
+```
+cd ~/
+git clone https://github.com/soumith/cudnn.torch.git -b R7
+cd cudnn.torch
+luarocks make cudnn-scm-1.rockspec
+```
+You should now be able to run `neural-style` with cuDNN like this:
+```
+th neural_style.lua -gpu 0 -backend cudnn
+```
+Note that the cuDNN backend can only be used for GPU mode.
 
 ## Usage
 Basic usage:
